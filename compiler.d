@@ -29,8 +29,13 @@ void expected(string msg)
 
 void match(char c)
 {
-    if (LOOK == c)
+    if (LOOK != c)
+        expected("'" ~ c ~ "'");
+
+    else {
         getChar();
+        skipWhite();
+    }
 }
 
 bool isAddop(char c)
@@ -43,24 +48,52 @@ bool isMulop(char c)
     return LOOK == '*' || LOOK == '/';
 }
 
-char getName()
+bool isAlNum(char c)
 {
+    return isAlpha(c) || isDigit(c);
+}
+
+string getName()
+{
+    string token = "";
+    string retval;
+
     if (!isAlpha(LOOK))
         expected("Name");
 
-    char result = LOOK;
-    getChar();
-    return result.toUpper();
+    while (isAlNum(LOOK)) {
+        token ~= LOOK.toUpper();
+        getChar();
+    }
+
+    retval = token;
+    skipWhite();
+    return token;
 }
 
-char getNum()
+string getNum()
 {
+    string value = "";
+    string retval;
+
     if (!isDigit(LOOK))
         expected("Integer");
 
-    char result = LOOK;
-    getChar();
-    return result;
+    while (isDigit(LOOK)) {
+        value ~= LOOK;
+        getChar();
+    }
+
+    retval = value;
+    skipWhite();
+    return value;
+}
+
+void skipWhite()
+{
+    while (LOOK == ' ' || LOOK == '\t') {
+        getChar();
+    }
 }
 
 void emit(string msg)
@@ -162,7 +195,7 @@ void expression()
 
 void ident()
 {
-    char name = getName();
+    string name = getName();
 
     // function
     if (LOOK == '(') {
@@ -184,7 +217,7 @@ void ident()
 
 void assignment()
 {
-    char name = getName();
+    string name = getName();
     match('=');
     expression();
     emitln("LEA " ~ name ~ "(PC),A0");
@@ -194,8 +227,8 @@ void assignment()
 
 int main() {
     getChar();
+    skipWhite();
     expression();
-    //assignment();
     if (LOOK != '\n')
         expected("Newline");
 
