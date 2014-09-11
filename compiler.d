@@ -1,131 +1,104 @@
 #!/usr/bin/env rdmd
 
+import std.conv;
 import std.stdio;
 import std.ascii;
 import std.c.process;
+import std.algorithm;
+
 import utils;
+import arithmetics;
 
-void add()
+/******** GLOBAL VARIABLES ********/
+int  LCOUNT = 0;
+/**********************************/
+
+
+string newLabel()
 {
-    match('+');
-    term();
-    emitln("ADD (SP)+,D0");
+    return "L" ~ to!string(LCOUNT++);
 }
 
-void substract()
+void postLabel(string label)
 {
-    match('-');
-    term();
-    emitln("SUB (SP)+,D0");
-    emitln("NEG D0");
+    writeln(label ~ ":");
 }
 
-void multiply()
+void other()
 {
-    match('*');
-    factor();
-    emitln("MULS (SP)+,D0");
+    emitln(getName());
 }
 
-void divide()
+void program()
 {
-    match('/');
-    factor();
-    emitln("MOVE (SP)+,D1");
-    emitln("DIVS D1,D0");
+    block();
+    if (LOOK != 'e')
+        expected("End");
+    emitln("END");
 }
 
-void term()
+void condition()
 {
-    // factor
-    factor();
+    emitln("<condition>");
+}
 
-    // mulop expression
-    while (isMulop(LOOK)) {
-        emitln("MOVE D0,-(SP)");
+void doIf()
+{
+    match('i');
+
+    condition();
+
+    string label1 = newLabel();
+    string label2 = label1;
+    emitln("BEQ " ~ label1);
+    block();
+
+    if (LOOK == 'l') {
+        match('l');
+        label2 = newLabel();
+        emitln("BRA " ~ label2);
+        postLabel(label1);
+        block();
+    }
+
+    match('e');
+    postLabel(label2);
+}
+
+void doWhile()
+{
+    match('w');
+    string label1 = newLabel();
+    string label2 = newLabel();
+    postLabel(label1);
+
+    condition();
+    emitln("BEQ " ~ label2);
+
+    block();
+    match('e');
+    emitln("BRA " ~ label1);
+    postLabel(label2);
+}
+
+void block()
+{
+    while (!canFind(['e', 'l'], LOOK)) {
         switch (LOOK) {
-            case '*': multiply(); break;
-            case '/': divide();   break;
-            default:  expected("Mulop");
+            case 'i': doIf();
+                      break;
+            case 'w': doWhile();
+                      break;
+            case 'o':
+            default : other();
         }
     }
-}
-
-void factor()
-{
-    // expression
-    if (LOOK == '(') {
-        match('(');
-        expression();
-        match(')');
-    }
-
-    // variable name
-    else if (isAlpha(LOOK))
-        ident();
-
-    // number
-    else
-        emitln("MOVE #" ~ getNum() ~ ",D0");
-}
-
-void expression()
-{
-    // sign
-    if (isAddop(LOOK))
-        emitln("CLR D0");
-    // term
-    else
-        term();
-
-    // addop expression
-    while (isAddop(LOOK)) {
-        emitln("MOVE D0,-(SP)");
-        switch (LOOK) {
-            case '+': add();       break;
-            case '-': substract(); break;
-            default:  expected("Addop");
-        }
-    }
-}
-
-void ident()
-{
-    string name = getName();
-
-    // function
-    if (LOOK == '(') {
-        match('(');
-        match(')');
-        emitln("BSR " ~ name);
-    }
-    // assignment
-    else if (LOOK == '=') {
-        match('=');
-        expression();
-        emitln("LEA " ~ name ~ "(PC),A0");
-        emitln("MOVE D0,(A0)");
-    }
-    // variable
-    else
-        emitln("MOVE " ~ name ~ "(PC),D0");
-}
-
-void assignment()
-{
-    string name = getName();
-    match('=');
-    expression();
-    emitln("LEA " ~ name ~ "(PC),A0");
-    emitln("MOVE D0,(A0)");
 }
 
 int main() {
     getChar();
     skipWhite();
-    expression();
-    if (LOOK != '\n')
-        expected("Newline");
 
+    program();
     return 0;
 }

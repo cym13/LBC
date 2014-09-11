@@ -4,7 +4,9 @@ import std.stdio;
 import std.ascii;
 import std.c.process;
 
+/******** GLOBAL VARIABLES ********/
 char LOOK;
+/**********************************/
 
 void getChar()
 {
@@ -51,42 +53,6 @@ bool isMulop(char c)
 bool isAlNum(char c)
 {
     return isAlpha(c) || isDigit(c);
-}
-
-string getName()
-{
-    string token = "";
-    string retval;
-
-    if (!isAlpha(LOOK))
-        expected("Name");
-
-    while (isAlNum(LOOK)) {
-        token ~= LOOK.toUpper();
-        getChar();
-    }
-
-    retval = token;
-    skipWhite();
-    return token;
-}
-
-string getNum()
-{
-    string value = "";
-    string retval;
-
-    if (!isDigit(LOOK))
-        expected("Integer");
-
-    while (isDigit(LOOK)) {
-        value ~= LOOK;
-        getChar();
-    }
-
-    retval = value;
-    skipWhite();
-    return value;
 }
 
 void skipWhite()

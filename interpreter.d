@@ -24,6 +24,24 @@ import utils;
 
 int[string] TABLE;
 
+string getName()
+{
+    string token = "";
+    string retval;
+
+    if (!isAlpha(LOOK))
+        expected("Name");
+
+    while (isAlNum(LOOK)) {
+        token ~= LOOK.toUpper();
+        getChar();
+    }
+
+    retval = token;
+    skipWhite();
+    return token;
+}
+
 int getNum()
 {
     string value = "";
