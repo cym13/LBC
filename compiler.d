@@ -81,15 +81,75 @@ void doWhile()
     postLabel(label2);
 }
 
+void doRepeat()
+{
+    string label = newLabel();
+    postLabel(label);
+
+    block();
+
+    match('u');
+    condition();
+    emitln("BEQ " ~ label);
+}
+
+void doLoop()
+{
+    string label = newLabel();
+    postLabel(label);
+
+    block();
+
+    match('e');
+    emitln("BRA " ~ label);
+}
+
+void expression()
+{
+    emitln("<expr>");
+}
+
+void doFor()
+{
+    match('f');
+    string label1 = newLabel();
+    string label2 = newLabel();
+    string name   = getName();
+
+    match('=');
+    expression();
+    emitln("MOVE D0,-(SP)");
+
+    postLabel(label1);
+    emitln("LEA " ~ name ~ "(PC),A0");
+    emitln("MOVE (A0),D0");
+    emitln("ADDQ #1,D0");
+    emitln("MOVE D0,(A0)");
+    emitln("CMP (SP),D0");
+    emitln("BGT " ~ label2);
+
+    block();
+
+    match('e');
+    emitln("BRA " ~ label1);
+    postLabel(label2);
+    emitln("ADDQ #2,SP");
+}
+
 void block()
 {
-    while (!canFind(['e', 'l'], LOOK)) {
+    while (!canFind(['e', 'l', 'u'], LOOK)) {
         switch (LOOK) {
             case 'i': doIf();
                       break;
             case 'w': doWhile();
                       break;
-            case 'o':
+            case 'p': doLoop();
+                      break;
+            case 'r': doRepeat();
+                      break;
+            case 'f': doFor();
+                      break;
             default : other();
         }
     }
