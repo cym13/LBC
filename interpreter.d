@@ -5,13 +5,30 @@ import std.ascii;
 import std.c.process;
 import std.conv;
 
+/*  Syntax and specifications:
+    --------------------------
+
+   - 26 variables available (a..z)
+   - Assignments: a=EXPRESSION
+   - Output:      !EXPRESSION
+   - Input:       ?NAME
+
+    Where:
+    EXPRESSION is a mathematical expressions composed of +-/*()
+    NAME       is the name of a variable
+
+    The instructions are delimited by new lines
+    The program must end with a dot '.'
+*/
+
 char LOOK;
-int[char] TABLE;
+int[string] TABLE;
 
 void initTable()
 {
-    foreach(char c; uppercase)
-        TABLE[c] = 0;
+    foreach(char c; uppercase) {
+        TABLE[to!string(c)] = 0;
+    }
 }
 
 void getChar()
@@ -129,21 +146,30 @@ int term()
                 break;
         }
     }
+
     return value;
 }
 
 int factor()
 {
+    int value;
+
     // expression
     if (LOOK == '(') {
         match('(');
-        return expression();
+        value = expression();
         match(')');
     }
 
+    // variable
+    else if (isAlpha(LOOK))
+        value = TABLE[getName()];
+
     // number
     else
-        return getNum();
+        value = getNum();
+
+    return value;
 }
 
 int expression()
@@ -172,44 +198,52 @@ int expression()
     return value;
 }
 
-void ident()
+void input()
 {
-    string name = getName();
+    match('?');
+    TABLE[getName()] = readf(" %s");
+}
 
-    // function
-    if (LOOK == '(') {
-        match('(');
-        match(')');
-        emitln("BSR " ~ name);
-    }
-    // assignment
-    else if (LOOK == '=') {
-        match('=');
-        expression();
-        emitln("LEA " ~ name ~ "(PC),A0");
-        emitln("MOVE D0,(A0)");
-    }
-    // variable
-    else
-        emitln("MOVE " ~ name ~ "(PC),D0");
+void output()
+{
+    match('!');
+    writeln(expression());
 }
 
 void assignment()
 {
     string name = getName();
     match('=');
-    expression();
-    emitln("LEA " ~ name ~ "(PC),A0");
-    emitln("MOVE D0,(A0)");
+    TABLE[name] = expression();
+}
+
+void init()
+{
+    initTable();
+    getChar();
+    skipWhite();
 }
 
 
 int main() {
-    initTable();
-    getChar();
-    skipWhite();
+    init();
+    //writeln(expression());
 
-    writeln(expression());
+    while(LOOK != '.') {
+        switch (LOOK) {
+            case '?':
+                input();
+                break;
+
+            case '!':
+                output();
+                break;
+
+            default:
+                assignment();
+        }
+        match('\n');
+    }
 
     return 0;
 }
