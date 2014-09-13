@@ -29,9 +29,9 @@ void other()
     emitln(getName());
 }
 
-void program()
+void program(string label)
 {
-    block();
+    block("");
     if (LOOK != 'e')
         expected("End");
     emitln("END");
@@ -42,7 +42,7 @@ void condition()
     emitln("<condition>");
 }
 
-void doIf()
+void doIf(string label)
 {
     match('i');
 
@@ -51,14 +51,14 @@ void doIf()
     string label1 = newLabel();
     string label2 = label1;
     emitln("BEQ " ~ label1);
-    block();
+    block(label);
 
     if (LOOK == 'l') {
         match('l');
         label2 = newLabel();
         emitln("BRA " ~ label2);
         postLabel(label1);
-        block();
+        block(label);
     }
 
     match('e');
@@ -68,14 +68,15 @@ void doIf()
 void doWhile()
 {
     match('w');
-    string label1 = newLabel();
-    string label2 = newLabel();
+    string label1      = newLabel();
+    string label2      = newLabel();
+    string break_label = newLabel();
     postLabel(label1);
 
     condition();
     emitln("BEQ " ~ label2);
 
-    block();
+    block(break_label);
     match('e');
     emitln("BRA " ~ label1);
     postLabel(label2);
@@ -83,10 +84,11 @@ void doWhile()
 
 void doRepeat()
 {
-    string label = newLabel();
+    string label       = newLabel();
+    string break_label = newLabel();
     postLabel(label);
 
-    block();
+    block(break_label);
 
     match('u');
     condition();
@@ -95,13 +97,15 @@ void doRepeat()
 
 void doLoop()
 {
-    string label = newLabel();
+    string label       = newLabel();
+    string break_label = newLabel();
     postLabel(label);
 
-    block();
+    block(break_label);
 
     match('e');
     emitln("BRA " ~ label);
+    postLabel(break_label);
 }
 
 void expression()
@@ -112,9 +116,10 @@ void expression()
 void doFor()
 {
     match('f');
-    string label1 = newLabel();
-    string label2 = newLabel();
-    string name   = getName();
+    string name        = getName();
+    string label1      = newLabel();
+    string label2      = newLabel();
+    string break_label = newLabel();
 
     match('=');
     expression();
@@ -128,7 +133,7 @@ void doFor()
     emitln("CMP (SP),D0");
     emitln("BGT " ~ label2);
 
-    block();
+    block(break_label);
 
     match('e');
     emitln("BRA " ~ label1);
@@ -136,11 +141,41 @@ void doFor()
     emitln("ADDQ #2,SP");
 }
 
-void block()
+void doDo()
+{
+    match('d');
+    string label       = newLabel();
+    string break_label = newLabel();
+
+    expression();
+    emitln("SUBQ #1,D0");
+
+    postLabel(label);
+    emitln("MOVE D0,-(SP)");
+
+    block(break_label);
+
+    emitln("MOVE (SP)+,D0");
+    emitln("DBRA D0," ~ label);
+    emitln("SUBQ #2,SP");
+    postLabel(break_label);
+    emitln("ADDQ #2,SP");
+}
+
+void doBreak(string label)
+{
+    match('b');
+    if (label != "")
+        emitln("BRA " ~ label);
+    else
+        abort("No loop to break from");
+}
+
+void block(string label)
 {
     while (!canFind(['e', 'l', 'u'], LOOK)) {
         switch (LOOK) {
-            case 'i': doIf();
+            case 'i': doIf(label);
                       break;
             case 'w': doWhile();
                       break;
@@ -149,6 +184,10 @@ void block()
             case 'r': doRepeat();
                       break;
             case 'f': doFor();
+                      break;
+            case 'd': doFor();
+                      break;
+            case 'b': doBreak(label);
                       break;
             default : other();
         }
@@ -159,6 +198,6 @@ int main() {
     getChar();
     skipWhite();
 
-    program();
+    program("");
     return 0;
 }
