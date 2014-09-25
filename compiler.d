@@ -194,6 +194,95 @@ void block(string label)
     }
 }
 
+/********************************************************/
+
+bool isBoolean(char c) {
+    return canFind(['T', 'F'], c.toUpper());
+}
+
+bool getBoolean() {
+    bool b;
+    if (!isBoolean(LOOK))
+        expected("Boolean Literal");
+
+    b = LOOK.toUpper() == 'T';
+    getChar();
+    return b;
+}
+
+void boolExpression() {
+    boolTerm();
+    while (isOrOp(LOOK)) {
+        emitln("MOVE D0,-(SP)");
+        switch (LOOK) {
+            case '|': boolOr()  ; break;
+            case '~': boolXor() ; break;
+            default : break;
+        }
+    }
+}
+
+bool isOrOp(char c) {
+    return canFind(['|', '~'], c);
+}
+
+void boolTerm() {
+    notFactor();
+    while (LOOK == '&') {
+        emitln("MOVE D0,-(SP)");
+        match('&');
+        notFactor();
+        emitln("AND (SP)+,D0");
+    }
+}
+
+void notFactor() {
+    if (LOOK == '!') {
+        match('!');
+        boolFactor();
+        emitln("EOR #-1,D0");
+    }
+    else {
+        boolFactor();
+    }
+}
+
+void boolFactor() {
+    if (isBoolean(LOOK)) {
+        if (getBoolean())
+            emitln("MOVE #-1,D0");
+        else
+            emitln("CLR D0");
+    }
+
+    else {
+        relation();
+    }
+}
+
+void relation() {
+    writeln("<relation>");
+    getChar();
+}
+
+void boolOr() {
+    match('|');
+    boolTerm();
+    emitln("OR (SP)+,D0");
+}
+
+void boolXor() {
+    match('~');
+    boolTerm();
+    emitln("EOR (SP)+,D0");
+}
+
+bool isRelOp(char c) {
+    return canFind(['=', '#', '<', '>'], c);
+}
+
+/********************************************************/
+
 int main() {
     getChar();
     skipWhite();
