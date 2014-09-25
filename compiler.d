@@ -261,8 +261,18 @@ void boolFactor() {
 }
 
 void relation() {
-    writeln("<relation>");
-    getChar();
+    expression();
+    if (isRelOp(LOOK)) {
+        emitln("MOVE D0,-(SP)");
+        switch (LOOK){
+            case '=': equals()    ; break;
+            case '#': notEquals() ; break;
+            case '<': less()      ; break;
+            case '>': greater()   ; break;
+            default :               break;
+        }
+        emitln("TST D0");
+    }
 }
 
 void boolOr() {
@@ -281,6 +291,33 @@ bool isRelOp(char c) {
     return canFind(['=', '#', '<', '>'], c);
 }
 
+void equals() {
+    match('=');
+    expression();
+    emitln("CMP (SP)+,D0");
+    emitln("SEQ D0");
+}
+
+void notEquals() {
+    match('#');
+    expression();
+    emitln("CMP (SP)+,D0");
+    emitln("SNE D0");
+}
+
+void less() {
+    match('<');
+    expression();
+    emitln("CMP (SP)+,D0");
+    emitln("SGE D0");
+}
+
+void greater() {
+    match('>');
+    expression();
+    emitln("CMP (SP)+,D0");
+    emitln("SLE D0");
+}
 /********************************************************/
 
 int main() {
